@@ -19,33 +19,19 @@ steps:
     with:
       node-version: '18'
 
-  - name: Install Backend Dependencies
-    run: |
-      npm install
-
-  - name: Build Frontend
-    run: |
-      cd client
-      npm install
-      npm run build
+  - name: Install Dependencies
+    run: npm install
 
   - name: Setup Python
     uses: actions/setup-python@v4
     with:
       python-version: '3.10'
 
-  - name: Install Python Dependencies
-    run: |
-      pip install pandas scholarly
+  - name: Install Python Packages
+    run: pip install pandas scholarly
 
-  - name: Run Data Script (Test)
-    run: |
-      python test_script.py
-
-  - name: Prisma Check
-    run: |
-      npx prisma generate
-
-  - name: Build Success
-    run: echo "Pipeline executed successfully!"
+  - name: Run Python Script
+    run: python test_scholarly.py
 ```
+
+
