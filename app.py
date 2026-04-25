@@ -1,158 +1,133 @@
 import streamlit as st
 import pandas as pd
-from docx import Document
-from io import BytesIO
 
-# ================================
-# 🌙 DARK MODE TOGGLE
-# ================================
-mode = st.sidebar.toggle("🌙 Dark Mode")
+# ===============================
+# PAGE CONFIG
+# ===============================
+st.set_page_config(page_title="Publication Summary Generator", layout="wide")
 
-if mode:
-    bg_color = "#1e1e1e"
-    text_color = "white"
-else:
-    bg_color = "#f5f7fa"
-    text_color = "black"
+# ===============================
+# HEADER
+# ===============================
+st.title("📊 Publication Summary Generator")
+st.write("Upload your publication file to view dashboard")
 
-# ================================
-# 🎨 CUSTOM CSS
-# ================================
-st.markdown(f"""
-<style>
-.stApp {{
-    background-color: {bg_color};
-    color: {text_color};
-}}
+# ===============================
+# FILE UPLOAD
+# ===============================
+uploaded_file = st.file_uploader("Upload publications.xlsx", type=["xlsx"])
 
-h1 {{
-    text-align: center;
-}}
+if uploaded_file:
 
-.stButton>button {{
-    background-color: #3498db;
-    color: white;
-    border-radius: 10px;
-}}
+    df = pd.read_excel(uploaded_file)
 
-.stDownloadButton>button {{
-    background-color: #27ae60;
-    color: white;
-    border-radius: 10px;
-}}
+    # Clean column names
+    df.columns = [col.strip() for col in df.columns]
 
-[data-testid="metric-container"] {{
-    background-color: #ffffff;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.15);
-}}
-</style>
-""", unsafe_allow_html=True)
+    # Ensure Source column exists
+    if "Source" not in df.columns:
+        df["Source"] = "Unknown"
 
-# ================================
-# 🖼️ LOGO + TITLE
-# ================================
-st.markdown("<h1>📊 Publication Summary Generator</h1>", unsafe_allow_html=True)
+    # ===============================
+    # 🔥 FINAL CLASSIFICATION (FIXED)
+    # ===============================
+    def classify(row):
+        venue = str(row.get("Venue", "")).lower()
+        source = str(row.get("Source", "")).lower()
 
-st.sidebar.title("📌 Navigation")
-page = st.sidebar.radio("Go to", ["🏠 Home", "📊 Dashboard"])
+        # PRIORITY 1: SOURCE
+        if "google scholar" in source:
+            return "Journal"
 
-# ================================
-# 🏠 HOME PAGE
-# ================================
-if page == "🏠 Home":
-    st.write("Upload your publication data to generate reports.")
+        if "dblp" in source:
+            return "Conference"
 
-    uploaded_file = st.file_uploader("Upload publications.xlsx", type=["xlsx"])
+        # PRIORITY 2: VENUE KEYWORDS
+        if any(k in venue for k in ["journal", "elsevier", "springer"]):
+            return "Journal"
 
-    if uploaded_file:
-        df = pd.read_excel(uploaded_file)
-        df.columns = ["Faculty Name", "Year", "Title", "Venue"]
-        df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
+        if any(k in venue for k in ["conference", "conf", "ieee"]):
+            return "Conference"
 
-        def classify(v):
-            v = str(v).lower()
-            if "journal" in v:
-                return "Journal"
-            elif "conference" in v or "conf" in v:
-                return "Conference"
-            return "Other"
+        return "Other"
 
-        df["Type"] = df["Venue"].apply(classify)
+    # Apply classification
+    df["Type"] = df.apply(classify, axis=1)
 
-        st.session_state["data"] = df
-        st.success("✅ File uploaded successfully! Go to Dashboard")
+    # Convert Year
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
 
-# ================================
-# 📊 DASHBOARD
-# ================================
-if page == "📊 Dashboard":
+    # ===============================
+    # 🔍 DEBUG (VERY IMPORTANT)
+    # ===============================
+    st.subheader("🔍 Debug Info")
 
-    if "data" not in st.session_state:
-        st.warning("⚠️ Please upload file first from Home page")
+    st.write("Columns:", df.columns.tolist())
+    st.write("Source Distribution:", df["Source"].value_counts())
+    st.write("Type Distribution:", df["Type"].value_counts())
+
+    # ===============================
+    # DASHBOARD
+    # ===============================
+    st.header("📈 Dashboard")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Total Publications", len(df))
+    col2.metric("Journal Papers", len(df[df["Type"] == "Journal"]))
+    col3.metric("Conference Papers", len(df[df["Type"] == "Conference"]))
+
+    # ===============================
+    # YEAR FILTER
+    # ===============================
+    st.subheader("📅 Filter by Year")
+
+    min_year = int(df["Year"].min())
+    max_year = int(df["Year"].max())
+
+    year_range = st.slider("Select Year Range", min_year, max_year, (min_year, max_year))
+
+    df_filtered = df[(df["Year"] >= year_range[0]) & (df["Year"] <= year_range[1])]
+
+    # ===============================
+    # JOURNAL TABLE
+    # ===============================
+    st.subheader("📄 Journal Publications")
+
+    journal_df = df_filtered[df_filtered["Type"] == "Journal"]
+
+    if journal_df.empty:
+        st.warning("No Journal Publications Found")
     else:
-        df = st.session_state["data"]
+        st.dataframe(journal_df)
 
-        st.subheader("📅 Select Year Range")
+    # ===============================
+    # CONFERENCE TABLE
+    # ===============================
+    st.subheader("📄 Conference Publications")
 
-        min_year = int(df["Year"].min())
-        max_year = int(df["Year"].max())
+    conf_df = df_filtered[df_filtered["Type"] == "Conference"]
 
-        start_year, end_year = st.slider(
-            "Select range",
-            min_year,
-            max_year,
-            (min_year, max_year)
-        )
+    if conf_df.empty:
+        st.warning("No Conference Publications Found")
+    else:
+        st.dataframe(conf_df)
 
-        df = df[(df["Year"] >= start_year) & (df["Year"] <= end_year)]
+    # ===============================
+    # RAW DATA (OPTIONAL)
+    # ===============================
+    with st.expander("🔍 View Raw Data"):
+        st.dataframe(df_filtered)
 
-        # ================================
-        # 📈 METRICS
-        # ================================
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total", len(df))
-        col2.metric("Journals", len(df[df["Type"] == "Journal"]))
-        col3.metric("Conferences", len(df[df["Type"] == "Conference"]))
+    # ===============================
+    # DOWNLOAD
+    # ===============================
+    st.download_button(
+        "📥 Download Filtered Data",
+        df_filtered.to_csv(index=False),
+        "filtered_publications.csv",
+        "text/csv"
+    )
 
-        # ================================
-        # 📊 GRAPH
-        # ================================
-        st.subheader("📊 Publications per Year")
-        chart_data = df.groupby("Year").size()
-        st.bar_chart(chart_data)
-
-        # ================================
-        # 📄 TABLES
-        # ================================
-        st.subheader("📄 Journal Publications")
-        st.dataframe(df[df["Type"] == "Journal"])
-
-        st.subheader("📄 Conference Publications")
-        st.dataframe(df[df["Type"] == "Conference"])
-
-        # ================================
-        # 📥 DOWNLOAD EXCEL
-        # ================================
-        excel_buffer = BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-
-        st.download_button("📥 Download Excel", excel_buffer.getvalue(), "report.xlsx")
-
-        # ================================
-        # 📥 DOWNLOAD WORD
-        # ================================
-        doc = Document()
-        doc.add_heading("Faculty Publication Report", 0)
-
-        for name in df["Faculty Name"].unique():
-            doc.add_heading(name, level=1)
-            for _, row in df[df["Faculty Name"] == name].iterrows():
-                doc.add_paragraph(f"{int(row['Year'])} - {row['Title']} ({row['Type']})")
-
-        word_buffer = BytesIO()
-        doc.save(word_buffer)
-
-        st.download_button("📥 Download Word", word_buffer.getvalue(), "report.docx")
+else:
+    st.info("👆 Upload publications.xlsx to see dashboard")
