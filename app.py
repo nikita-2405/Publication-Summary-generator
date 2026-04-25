@@ -58,9 +58,9 @@ if uploaded_file:
     df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
 
     # ===============================
-    # 🔍 DEBUG (VERY IMPORTANT)
+    # DEBUG (VERY IMPORTANT)
     # ===============================
-    st.subheader("🔍 Debug Info")
+    st.subheader(" Debug Info")
 
     st.write("Columns:", df.columns.tolist())
     st.write("Source Distribution:", df["Source"].value_counts())
@@ -69,7 +69,7 @@ if uploaded_file:
     # ===============================
     # DASHBOARD
     # ===============================
-    st.header("📈 Dashboard")
+    st.header(" Dashboard")
 
     col1, col2, col3 = st.columns(3)
 
@@ -80,7 +80,7 @@ if uploaded_file:
     # ===============================
     # YEAR FILTER
     # ===============================
-    st.subheader("📅 Filter by Year")
+    st.subheader(" Filter by Year")
 
     min_year = int(df["Year"].min())
     max_year = int(df["Year"].max())
@@ -92,7 +92,7 @@ if uploaded_file:
     # ===============================
     # JOURNAL TABLE
     # ===============================
-    st.subheader("📄 Journal Publications")
+    st.subheader(" Journal Publications")
 
     journal_df = df_filtered[df_filtered["Type"] == "Journal"]
 
@@ -104,7 +104,7 @@ if uploaded_file:
     # ===============================
     # CONFERENCE TABLE
     # ===============================
-    st.subheader("📄 Conference Publications")
+    st.subheader("Conference Publications")
 
     conf_df = df_filtered[df_filtered["Type"] == "Conference"]
 
@@ -116,18 +116,20 @@ if uploaded_file:
     # ===============================
     # RAW DATA (OPTIONAL)
     # ===============================
-    with st.expander("🔍 View Raw Data"):
+    with st.expander("View Raw Data"):
         st.dataframe(df_filtered)
 
     # ===============================
     # DOWNLOAD
     # ===============================
     st.download_button(
-        "📥 Download Filtered Data",
+        " Download Filtered Data",
         df_filtered.to_csv(index=False),
         "filtered_publications.csv",
         "text/csv"
     )
 
 else:
-    st.info("👆 Upload publications.xlsx to see dashboard")
+    st.info(" Upload publications.xlsx to see dashboard")
+
+   
