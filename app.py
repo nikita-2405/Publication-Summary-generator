@@ -1,10 +1,13 @@
+
 import streamlit as st
 import pandas as pd
+from database import create_database, save_to_db, load_from_db
 
 # ===============================
 # PAGE CONFIG
 # ===============================
 st.set_page_config(page_title="Publication Summary Generator", layout="wide")
+create_database()
 
 # ===============================
 # HEADER
@@ -20,6 +23,8 @@ uploaded_file = st.file_uploader("Upload publications.xlsx", type=["xlsx"])
 if uploaded_file:
 
     df = pd.read_excel(uploaded_file)
+    save_to_db(df)
+    df = load_from_db()
 
     # Clean column names
     df.columns = [col.strip() for col in df.columns]
