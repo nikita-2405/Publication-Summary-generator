@@ -1,0 +1,13 @@
+streamlit
+pandas
+openpyxl
+flask
+flask_sqlalchemy
+sqlalchemy
+scholarly
+pytest
+numpy
+scikit-learn
+python-docx
+xlrd
+requests
